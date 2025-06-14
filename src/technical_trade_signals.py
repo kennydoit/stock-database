@@ -82,12 +82,16 @@ def generate_trade_signals(indicators_df: pd.DataFrame) -> pd.DataFrame:
         sig_col = f'adx_trend_{w}'
         signals[sig_col] = (indicators_df[col] > 20).astype(int)
 
-    # Parabolic SAR (price crosses above/below SAR)
-    psar_col = 'psar'
-    sig_col = 'psar_signal'
-    signals[sig_col] = 0
-    signals.loc[indicators_df['close'] > indicators_df[psar_col], sig_col] = 1
-    signals.loc[indicators_df['close'] < indicators_df[psar_col], sig_col] = -1
+    # Parabolic SAR (for each PSAR column in the schema, only if present)
+    psar_columns = [col for col in ["psar_001_02", "psar_002_02", "psar_004_02"] if col in indicators_df.columns]
+    for psar_col in psar_columns:
+        sig_col = f"psar_signal_{psar_col.split('_')[1]}_{psar_col.split('_')[2]}"
+        signals[sig_col] = 0
+        # Fill None/NaN with a value that will never trigger a signal (e.g., -inf for PSAR, inf for close)
+        close = indicators_df['close'].astype(float).fillna(float('-inf'))
+        psar = indicators_df[psar_col].astype(float).fillna(float('inf'))
+        signals.loc[close > psar, sig_col] = 1
+        signals.loc[close < psar, sig_col] = -1
 
     # Donchian Channel (price breaks channel)
     for w in [10, 20, 50]:

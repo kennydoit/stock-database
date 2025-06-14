@@ -12,6 +12,41 @@ import yaml
 
 logger = logging.getLogger(__name__)
 
+TECHNICAL_INDICATOR_COLUMNS = [
+    "symbol_id", "date",
+    "rsi_7", "rsi_14", "rsi_30", "rsi_50",
+    "sma_5", "sma_10", "sma_20", "sma_50", "sma_100", "sma_200",
+    "ema_5", "ema_10", "ema_20", "ema_50", "ema_100", "ema_200",
+    "macd_6_13_5", "macd_signal_6_13_5", "macd_hist_6_13_5",
+    "macd_12_26_9", "macd_signal_12_26_9", "macd_hist_12_26_9",
+    "macd_19_39_9", "macd_signal_19_39_9", "macd_hist_19_39_9",
+    "bb_upper_10", "bb_middle_10", "bb_lower_10",
+    "bb_upper_14", "bb_middle_14", "bb_lower_14",
+    "bb_upper_20", "bb_middle_20", "bb_lower_20",
+    "bb_upper_50", "bb_middle_50", "bb_lower_50",
+    "stoch_k_7_3", "stoch_d_7_3",
+    "stoch_k_10_3", "stoch_d_10_3",
+    "stoch_k_14_3", "stoch_d_14_3",
+    "stoch_k_21_3", "stoch_d_21_3",
+    "stoch_k_30_3", "stoch_d_30_3",
+    "cci_10", "cci_14", "cci_20", "cci_40",
+    "atr_7", "atr_14", "atr_21", "atr_30",
+    "obv_10", "obv_20", "obv_50",
+    "ichimoku_conv_9", "ichimoku_base_26", "ichimoku_spanb_52",
+    "ichimoku_conv_7", "ichimoku_base_22",
+    "ichimoku_conv_12", "ichimoku_base_33",
+    "donchian_high_10", "donchian_low_10",
+    "donchian_high_20", "donchian_low_20",
+    "donchian_high_50", "donchian_low_50",
+    "adx_7", "adx_14", "adx_21", "adx_30",
+    "psar_001_02", "psar_002_02", "psar_004_02",
+    "close_lag_1", "close_lag_2", "close_lag_3", "close_lag_5", "close_lag_10", "close_lag_20",
+    "high_lag_1", "high_lag_2", "high_lag_3", "high_lag_5", "high_lag_10", "high_lag_20",
+    "low_lag_1", "low_lag_2", "low_lag_3", "low_lag_5", "low_lag_10", "low_lag_20",
+    "open_lag_1", "open_lag_2", "open_lag_3", "open_lag_5", "open_lag_10", "open_lag_20",
+    "volume_lag_1", "volume_lag_2", "volume_lag_3", "volume_lag_5", "volume_lag_10", "volume_lag_20"
+]
+
 class DatabaseManager:
     """
     Manages database operations for stock prediction ML project
@@ -435,9 +470,11 @@ class DatabaseManager:
             return
         if not self.connection:
             self.connect()
+        # Only keep columns that exist in the table
+        allowed_cols = [col for col in TECHNICAL_INDICATOR_COLUMNS if col in indicators_df.columns]
         for start in range(0, len(indicators_df), batch_size):
             end = start + batch_size
-            batch = indicators_df.iloc[start:end]
+            batch = indicators_df.iloc[start:end][allowed_cols]
             batch.to_sql(
                 'technical_indicators',
                 self.connection,
@@ -475,8 +512,10 @@ class DatabaseManager:
             self.connect()
 
         query = """
-            SELECT * FROM technical_indicators
-            ORDER BY symbol, date
+            SELECT ti.*, s.symbol
+            FROM technical_indicators ti
+            JOIN symbols s ON ti.symbol_id = s.id
+            ORDER BY s.symbol, ti.date
         """
         df = pd.read_sql_query(query, self.connection)
         if not df.empty:
@@ -486,14 +525,28 @@ class DatabaseManager:
     def insert_technical_trade_signals(self, signals_df, batch_size=100):
         """
         Insert trade signals into the technical_trade_signals table.
+        Dynamically filters columns to match the table schema.
         """
         if signals_df.empty:
             return
         if not self.connection:
             self.connect()
+        # Drop 'symbol' column if present
+        if 'symbol' in signals_df.columns:
+            signals_df = signals_df.drop(columns=['symbol'])
+        # Dynamically get columns from the table schema
+        cursor = self.connection.cursor()
+        cursor.execute("PRAGMA table_info(technical_trade_signals)")
+        table_info = cursor.fetchall()
+        table_columns = [col[1] for col in table_info]
+        # Only keep columns that exist in the table
+        allowed_cols = [col for col in signals_df.columns if col in table_columns]
+        dropped_cols = [col for col in signals_df.columns if col not in table_columns]
+        if dropped_cols:
+            print(f"[insert_technical_trade_signals] Dropping columns not in schema: {dropped_cols}")
         for start in range(0, len(signals_df), batch_size):
             end = start + batch_size
-            batch = signals_df.iloc[start:end]
+            batch = signals_df.iloc[start:end][allowed_cols]
             batch.to_sql(
                 'technical_trade_signals',
                 self.connection,

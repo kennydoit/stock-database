@@ -15,6 +15,10 @@ from database_manager import DatabaseManager
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Load config.yaml
+with open("config.yaml", "r") as f:
+    config = yaml.safe_load(f)
+
 def initialize_database(force_reset=False, db_name="stock_prediction.db"):
     """Initialize database and populate with universe symbols"""
     
@@ -100,7 +104,7 @@ def initialize_database(force_reset=False, db_name="stock_prediction.db"):
             print(f"⚠️ Could not move database: {e}")
     
     # Load symbols from validated_symbols.yaml
-    symbols_file = Path(r"C:\Users\Kenrm\repositories\stock-symbol-analyzer\data\validated_symbols.yaml")
+    symbols_file = Path(config.get("symbols_file"))
     
     if not symbols_file.exists():
         print(f"❌ Symbols file not found: {symbols_file}")
