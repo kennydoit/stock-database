@@ -1,1 +1,9 @@
 symbols_file: C:/Users/Kenrm/repositories/stock-symbol-analyzer/data/validated_symbols.yaml
+
+
+# Alpaca API configuration
+alpaca:
+  api_key: "PKZ9T5ZGPQSFJJSB0J4N"
+  secret_key: "zEyCkauW58QOnloTgQHj5kBNQg78SJfbGUDm4fYg"
+  base_url: "https://paper-api.alpaca.markets/v2"  # Paper trading
+  # base_url: "https://api.alpaca.markets"  # Live trading (use with caution)

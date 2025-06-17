@@ -76,10 +76,10 @@ def generate_trade_signals(indicators_df: pd.DataFrame) -> pd.DataFrame:
         signals.loc[indicators_df[col] > 100, sig_col] = -1
         signals.loc[indicators_df[col] < -100, sig_col] = 1
 
-    # ADX trend confirmation (not buy/sell, but trend/no trend)
+    # ADX signals (trend confirmation: 1 if ADX > 20, else 0)
     for w in [7, 14, 21, 30]:
         col = f'adx_{w}'
-        sig_col = f'adx_trend_{w}'
+        sig_col = f'adx_signal_{w}'
         signals[sig_col] = (indicators_df[col] > 20).astype(int)
 
     # Parabolic SAR (for each PSAR column in the schema, only if present)
@@ -93,13 +93,13 @@ def generate_trade_signals(indicators_df: pd.DataFrame) -> pd.DataFrame:
         signals.loc[close > psar, sig_col] = 1
         signals.loc[close < psar, sig_col] = -1
 
-    # Donchian Channel (price breaks channel)
+    # Donchian Channel (price breaks previous channel)
     for w in [10, 20, 50]:
         high_col = f'donchian_high_{w}'
         low_col = f'donchian_low_{w}'
         sig_col = f'donchian_signal_{w}'
         signals[sig_col] = 0
-        signals.loc[indicators_df['close'] > indicators_df[high_col], sig_col] = 1
-        signals.loc[indicators_df['close'] < indicators_df[low_col], sig_col] = -1
+        signals.loc[indicators_df['close'] > indicators_df[high_col].shift(1), sig_col] = 1
+        signals.loc[indicators_df['close'] < indicators_df[low_col].shift(1), sig_col] = -1
 
     return signals

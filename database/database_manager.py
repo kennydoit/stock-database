@@ -236,69 +236,6 @@ class DatabaseManager:
             self.connection.rollback()
             raise
     
-    def insert_news_article(self, headline: str, summary: str = None, content: str = None,
-                           author: str = None, source: str = None, url: str = None,
-                           published_at: datetime = None, symbols: List[str] = None) -> int:
-        """
-        Insert news article and link to symbols
-        
-        Parameters:
-        -----------
-        headline : str
-            Article headline
-        summary : str
-            Article summary
-        content : str
-            Full article content
-        author : str
-            Article author
-        source : str
-            News source
-        url : str
-            Article URL
-        published_at : datetime
-            Publication timestamp
-        symbols : List[str]
-            List of related symbols
-            
-        Returns:
-        --------
-        int
-            News article ID
-        """
-        if not self.connection:
-            self.connect()
-        
-        cursor = self.connection.cursor()
-        
-        try:
-            # Insert news article
-            cursor.execute("""
-                INSERT INTO news_articles 
-                (headline, summary, content, author, source, url, published_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (headline, summary, content, author, source, url, published_at))
-            
-            news_id = cursor.lastrowid
-            
-            # Link to symbols if provided
-            if symbols:
-                for symbol in symbols:
-                    symbol_id = self.insert_symbol(symbol)
-                    cursor.execute("""
-                        INSERT OR IGNORE INTO news_symbols (news_id, symbol_id)
-                        VALUES (?, ?)
-                    """, (news_id, symbol_id))
-            
-            self.connection.commit()
-            logger.debug(f"Inserted news article {news_id}: {headline[:50]}...")
-            return news_id
-            
-        except Exception as e:
-            logger.error(f"Failed to insert news article: {e}")
-            self.connection.rollback()
-            raise
-    
     def get_symbols(self) -> pd.DataFrame:
         """Get all symbols from database"""
         if not self.connection:
@@ -338,7 +275,7 @@ class DatabaseManager:
                    sp.low_price as low, sp.close_price as close,
                    sp.adj_close, sp.volume
             FROM stock_prices sp
-            JOIN symbols s ON sp.symbol_id = s.id
+            JOIN symbols s ON sp.symbol_id = s.symbol_id
             WHERE s.symbol = ?
         """
         params = [symbol]
@@ -357,59 +294,6 @@ class DatabaseManager:
         if not df.empty:
             df['date'] = pd.to_datetime(df['date'])
             df.set_index('date', inplace=True)
-        
-        return df
-    
-    def get_news_for_symbol(self, symbol: str, start_date: date = None,
-                           end_date: date = None, limit: int = None) -> pd.DataFrame:
-        """
-        Get news articles for symbol
-        
-        Parameters:
-        -----------
-        symbol : str
-            Stock symbol
-        start_date : date
-            Start date for news
-        end_date : date
-            End date for news
-        limit : int
-            Maximum number of articles
-            
-        Returns:
-        --------
-        pd.DataFrame
-            News articles data
-        """
-        if not self.connection:
-            self.connect()
-        
-        query = """
-            SELECT na.id, na.headline, na.summary, na.author, na.source,
-                   na.url, na.published_at, na.sentiment_score, na.sentiment_label
-            FROM news_articles na
-            JOIN news_symbols ns ON na.id = ns.news_id
-            JOIN symbols s ON ns.symbol_id = s.id
-            WHERE s.symbol = ?
-        """
-        params = [symbol]
-        
-        if start_date:
-            query += " AND DATE(na.published_at) >= ?"
-            params.append(start_date)
-        
-        if end_date:
-            query += " AND DATE(na.published_at) <= ?"
-            params.append(end_date)
-        
-        query += " ORDER BY na.published_at DESC"
-        
-        if limit:
-            query += f" LIMIT {limit}"
-        
-        df = pd.read_sql_query(query, self.connection, params=params)
-        if not df.empty:
-            df['published_at'] = pd.to_datetime(df['published_at'])
         
         return df
     
@@ -492,10 +376,10 @@ class DatabaseManager:
             self.connect()
 
         query = """
-            SELECT s.symbol, s.id as symbol_id, sp.date, sp.open_price as open, sp.high_price as high,
+            SELECT s.symbol, s.symbol_id, sp.date, sp.open_price as open, sp.high_price as high,
                    sp.low_price as low, sp.close_price as close, sp.adj_close, sp.volume
             FROM stock_prices sp
-            JOIN symbols s ON sp.symbol_id = s.id
+            JOIN symbols s ON sp.symbol_id = s.symbol_id
             ORDER BY s.symbol, sp.date
         """
         df = pd.read_sql_query(query, self.connection)
@@ -514,7 +398,7 @@ class DatabaseManager:
         query = """
             SELECT ti.*, s.symbol
             FROM technical_indicators ti
-            JOIN symbols s ON ti.symbol_id = s.id
+            JOIN symbols s ON ti.symbol_id = s.symbol_id
             ORDER BY s.symbol, ti.date
         """
         df = pd.read_sql_query(query, self.connection)
@@ -526,6 +410,7 @@ class DatabaseManager:
         """
         Insert trade signals into the technical_trade_signals table.
         Dynamically filters columns to match the table schema.
+        Performs upsert by deleting existing rows for (symbol_id, date) before insert.
         """
         if signals_df.empty:
             return
@@ -546,7 +431,18 @@ class DatabaseManager:
             print(f"[insert_technical_trade_signals] Dropping columns not in schema: {dropped_cols}")
         for start in range(0, len(signals_df), batch_size):
             end = start + batch_size
-            batch = signals_df.iloc[start:end][allowed_cols]
+            batch = signals_df.iloc[start:end][allowed_cols].copy()
+            # Ensure date is string for SQLite
+            if 'date' in batch.columns:
+                batch['date'] = batch['date'].astype(str)
+            # Upsert: delete existing rows for (symbol_id, date) in this batch
+            if not batch.empty:
+                symbol_date_tuples = list(batch[['symbol_id', 'date']].itertuples(index=False, name=None))
+                cursor.executemany(
+                    "DELETE FROM technical_trade_signals WHERE symbol_id = ? AND date = ?",
+                    symbol_date_tuples
+                )
+                self.connection.commit()
             batch.to_sql(
                 'technical_trade_signals',
                 self.connection,

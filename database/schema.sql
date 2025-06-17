@@ -202,14 +202,33 @@ CREATE TABLE IF NOT EXISTS technical_trade_signals (
     date DATE NOT NULL,
 
     -- Example signals (expand as needed)
-    rsi_signal_7 INTEGER, rsi_signal_14 INTEGER, rsi_signal_30 INTEGER, rsi_signal_50 INTEGER,
-    macd_signal_12_26_9 INTEGER, macd_signal_6_13_5 INTEGER, macd_signal_19_39_9 INTEGER,
-    bb_signal_10 INTEGER, bb_signal_14 INTEGER, bb_signal_20 INTEGER, bb_signal_50 INTEGER,
-    stoch_signal_7_3 INTEGER, stoch_signal_14_3 INTEGER, stoch_signal_30_3 INTEGER,
-    cci_signal_10 INTEGER, cci_signal_20 INTEGER, cci_signal_40 INTEGER,
-    adx_signal_7 INTEGER, adx_signal_14 INTEGER, adx_signal_21 INTEGER, adx_signal_30 INTEGER,
-    donchian_signal_10 INTEGER, donchian_signal_20 INTEGER, donchian_signal_50 INTEGER,
-    psar_signal_001_02 INTEGER, psar_signal_002_02 INTEGER, psar_signal_004_02 INTEGER,
+    rsi_signal_7 INTEGER, 
+    rsi_signal_14 INTEGER, 
+    rsi_signal_30 INTEGER, 
+    rsi_signal_50 INTEGER,
+    macd_cross_signal_6_13_5 INTEGER,
+    macd_cross_signal_12_26_9 INTEGER,
+    macd_cross_signal_19_39_9 INTEGER,
+    bb_signal_10 INTEGER, 
+    bb_signal_14 INTEGER, 
+    bb_signal_20 INTEGER, 
+    bb_signal_50 INTEGER,
+    stoch_signal_7_3 INTEGER, 
+    stoch_signal_14_3 INTEGER, 
+    stoch_signal_30_3 INTEGER,
+    cci_signal_10 INTEGER, 
+    cci_signal_20 INTEGER, 
+    cci_signal_40 INTEGER,
+    adx_signal_7 INTEGER, 
+    adx_signal_14 INTEGER, 
+    adx_signal_21 INTEGER, 
+    adx_signal_30 INTEGER,
+    donchian_signal_10 INTEGER, 
+    donchian_signal_20 INTEGER, 
+    donchian_signal_50 INTEGER,
+    psar_signal_001_02 INTEGER, 
+    psar_signal_002_02 INTEGER, 
+    psar_signal_004_02 INTEGER,
 
     -- Add more as needed...
 
@@ -252,8 +271,6 @@ CREATE TABLE IF NOT EXISTS outcomes (
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_stock_prices_symbol_date ON stock_prices(symbol_id, date);
---CREATE INDEX IF NOT EXISTS idx_news_published_at ON news_articles(published_at);
---CREATE INDEX IF NOT EXISTS idx_news_symbols_symbol ON news_symbols(symbol_id);
 CREATE INDEX IF NOT EXISTS idx_features_symbol_date ON features(symbol_id, date);
 CREATE INDEX IF NOT EXISTS idx_predictions_symbol_date ON predictions(symbol_id, prediction_date);
 CREATE INDEX IF NOT EXISTS idx_model_runs_symbol ON model_runs(target_symbol);

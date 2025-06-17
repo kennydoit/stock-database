@@ -21,12 +21,18 @@ def main():
             symbol_map = prices_df[['symbol_id', 'symbol']].drop_duplicates()
             indicators_df = indicators_df.merge(symbol_map, on='symbol_id', how='left')
 
+        print("Indicators DataFrame shape:", indicators_df.shape)
+        print(indicators_df.head())
+
         # Merge on symbol_id and date to get price/close
         merged_df = indicators_df.merge(
             prices_df[['symbol_id', 'date', 'close']],
             on=['symbol_id', 'date'],
             how='left'
         )
+
+        print("Merged DataFrame shape:", merged_df.shape)
+        print(merged_df.head())
 
         signals_df = generate_trade_signals(merged_df)
 
