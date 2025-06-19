@@ -10,6 +10,8 @@ def generate_outcomes(prices_df: pd.DataFrame) -> pd.DataFrame:
     outcomes = []
     for symbol_id, group in prices_df.groupby('symbol_id'):
         group = group.sort_values('date').copy()
+        # Ensure date is string for consistency
+        group['date'] = pd.to_datetime(group['date']).dt.strftime('%Y-%m-%d')
         for d in LOOKAHEADS:
             group[f'price_d{d}'] = group['close'].shift(-d)
             group[f'returns_d{d}'] = (group[f'price_d{d}'] - group['close']) / group['close']

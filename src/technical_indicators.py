@@ -9,6 +9,8 @@ def generate_indicators(prices_df: pd.DataFrame) -> pd.DataFrame:
     indicators = []
     for symbol, group in prices_df.groupby('symbol'):
         group = group.sort_values('date').copy()
+        # Ensure date is string for consistency
+        group['date'] = pd.to_datetime(group['date']).dt.strftime('%Y-%m-%d')
         # RSI
         for w in [7, 14, 30, 50]:
             group[f'rsi_{w}'] = ta.momentum.RSIIndicator(group['close'], window=w).rsi()
