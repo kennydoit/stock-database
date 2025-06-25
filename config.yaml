@@ -1,5 +1,8 @@
-symbols_file: C:/Users/Kenrm/repositories/stock-symbol-analyzer/data/validated_symbols.yaml
+symbols_file: $project_root/stock-symbol-analyzer/data/validated_symbols.yaml
 
+periods:
+  stock_collection:
+    start: '2020-01-01'
 
 # Alpaca API configuration
 alpaca:

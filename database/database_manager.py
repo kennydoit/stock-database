@@ -6,7 +6,7 @@ import sqlite3
 import pandas as pd
 import logging
 from pathlib import Path
-from typing import List, Dict, Optional, Tuple
+# from typing import List, Dict, Optional, Tuple
 from datetime import datetime, date
 import yaml
 
@@ -64,7 +64,7 @@ class DatabaseManager:
             Path to configuration file
         """
         if db_path is None:
-            db_path = str(Path(__file__).parent / 'stock_prediction.db')
+            db_path = str(Path(__file__).parent / 'stock_database.db')
         
         self.db_path = db_path
         self.config_path = config_path
@@ -171,7 +171,7 @@ class DatabaseManager:
             """, (symbol, name, sector, market_cap, exchange))
             
             # Get the symbol ID
-            cursor.execute("SELECT id FROM symbols WHERE symbol = ?", (symbol,))
+            cursor.execute("SELECT symbol_id FROM symbols WHERE symbol = ?", (symbol,))
             symbol_id = cursor.fetchone()[0]
             
             self.connection.commit()
@@ -242,7 +242,7 @@ class DatabaseManager:
             self.connect()
         
         return pd.read_sql_query("""
-            SELECT id, symbol, name, sector, market_cap, exchange, is_active
+            SELECT symbol_id, symbol, name, sector, market_cap, exchange, is_active
             FROM symbols 
             WHERE is_active = 1
             ORDER BY symbol
@@ -296,48 +296,6 @@ class DatabaseManager:
             df.set_index('date', inplace=True)
         
         return df
-    
-    def cleanup_old_data(self, days_to_keep: int = 365):
-        """
-        Clean up old data to manage database size
-        
-        Parameters:
-        -----------
-        days_to_keep : int
-            Number of days of data to keep
-        """
-        if not self.connection:
-            self.connect()
-        
-        cutoff_date = datetime.now().date() - pd.Timedelta(days=days_to_keep)
-        
-        cursor = self.connection.cursor()
-        
-        try:
-            # Clean old news articles
-            cursor.execute("""
-                DELETE FROM news_articles 
-                WHERE DATE(published_at) < ?
-            """, (cutoff_date,))
-            
-            news_deleted = cursor.rowcount
-            
-            # Clean old stock prices (keep more history)
-            stock_cutoff = datetime.now().date() - pd.Timedelta(days=days_to_keep * 3)
-            cursor.execute("""
-                DELETE FROM stock_prices 
-                WHERE date < ?
-            """, (stock_cutoff,))
-            
-            prices_deleted = cursor.rowcount
-            
-            self.connection.commit()
-            logger.info(f"Cleaned up {news_deleted} old news articles and {prices_deleted} old price records")
-            
-        except Exception as e:
-            logger.error(f"Failed to cleanup old data: {e}")
-            self.connection.rollback()
-            raise
     
     def get_recent_stock_prices(self, lookback_days=200):
         query = """
@@ -464,6 +422,29 @@ class DatabaseManager:
             batch = outcomes_df.iloc[start:end]
             batch.to_sql(
                 'outcomes',
+                self.connection,
+                if_exists='append',
+                index=False,
+                method='multi'
+            )
+
+    def insert_calendar(self, calendar_df, batch_size=100):
+        """
+        Insert calendar features into the calendar table.
+        """
+        if calendar_df.empty:
+            return
+        if not self.connection:
+            self.connect()
+        # Ensure date is string for SQLite
+        if 'date' in calendar_df.columns:
+            calendar_df = calendar_df.copy()
+            calendar_df['date'] = pd.to_datetime(calendar_df['date']).dt.strftime('%Y-%m-%d')
+        for start in range(0, len(calendar_df), batch_size):
+            end = start + batch_size
+            batch = calendar_df.iloc[start:end]
+            batch.to_sql(
+                'calendar',
                 self.connection,
                 if_exists='append',
                 index=False,

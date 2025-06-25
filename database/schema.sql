@@ -58,73 +58,6 @@ CREATE TABLE IF NOT EXISTS stock_prices (
 --    UNIQUE(news_id, symbol_id)
 --);
 
--- Table for storing computed features
-CREATE TABLE IF NOT EXISTS features (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    symbol_id INTEGER NOT NULL,
-    date DATE NOT NULL,
-    feature_name VARCHAR(100) NOT NULL,
-    feature_value DECIMAL(15,6),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (symbol_id) REFERENCES symbols(id),
-    UNIQUE(symbol_id, date, feature_name)
-);
-
--- Table for storing model predictions
-CREATE TABLE IF NOT EXISTS predictions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    symbol_id INTEGER NOT NULL,
-    prediction_date DATE NOT NULL,
-    target_date DATE NOT NULL,
-    model_name VARCHAR(100) NOT NULL,
-    prediction_value DECIMAL(10,4),
-    confidence_score DECIMAL(3,2),
-    actual_value DECIMAL(10,4),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (symbol_id) REFERENCES symbols(id)
-);
-
--- Add model tracking table
-CREATE TABLE IF NOT EXISTS model_runs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    run_id TEXT UNIQUE NOT NULL,
-    target_symbol TEXT NOT NULL,
-    model_type TEXT NOT NULL,
-    train_r2 REAL,
-    test_r2 REAL,
-    train_mse REAL,
-    test_mse REAL,
-    n_features INTEGER,
-    feature_selection_method TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    config_snapshot TEXT,  -- JSON string of config
-    notes TEXT
-);
-
--- Add feature importance tracking
-CREATE TABLE IF NOT EXISTS feature_importance (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    run_id TEXT NOT NULL,
-    feature_name TEXT NOT NULL,
-    coefficient REAL,
-    abs_coefficient REAL,
-    p_value REAL,
-    rank_importance INTEGER,
-    FOREIGN KEY (run_id) REFERENCES model_runs (run_id)
-);
-
--- Add prediction tracking
-CREATE TABLE IF NOT EXISTS model_predictions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    run_id TEXT NOT NULL,
-    prediction_date DATE NOT NULL,
-    actual_return REAL,
-    predicted_return REAL,
-    residual REAL,
-    data_type TEXT CHECK (data_type IN ('train', 'test', 'validation')),
-    FOREIGN KEY (run_id) REFERENCES model_runs (run_id)
-);
-
 -- Table for storing technical indicators
 CREATE TABLE IF NOT EXISTS technical_indicators (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -269,14 +202,38 @@ CREATE TABLE IF NOT EXISTS outcomes (
     UNIQUE(symbol_id, date)
 );
 
+CREATE TABLE IF NOT EXISTS calendar(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date DATE NOT NULL,
+    dow_1 INTEGER,
+    dow_2 INTEGER,
+    dow_3 INTEGER,
+    dow_4 INTEGER,
+    dow_5 INTEGER,
+    dow_6 INTEGER,
+    dow_7 INTEGER,
+    month_1 INTEGER,
+    month_2 INTEGER,
+    month_3 INTEGER,
+    month_4 INTEGER,
+    month_5 INTEGER,
+    month_6 INTEGER,
+    month_7 INTEGER,
+    month_8 INTEGER,
+    month_9 INTEGER,
+    month_10 INTEGER,
+    month_11 INTEGER,
+    month_12 INTEGER,
+    quarter_1 INTEGER,
+    quarter_2 INTEGER,
+    quarter_3 INTEGER,
+    quarter_4 INTEGER,
+    UNIQUE(date)
+);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_stock_prices_symbol_date ON stock_prices(symbol_id, date);
-CREATE INDEX IF NOT EXISTS idx_features_symbol_date ON features(symbol_id, date);
-CREATE INDEX IF NOT EXISTS idx_predictions_symbol_date ON predictions(symbol_id, prediction_date);
-CREATE INDEX IF NOT EXISTS idx_model_runs_symbol ON model_runs(target_symbol);
-CREATE INDEX IF NOT EXISTS idx_model_runs_created ON model_runs(created_at);
-CREATE INDEX IF NOT EXISTS idx_feature_importance_run ON feature_importance(run_id);
-CREATE INDEX IF NOT EXISTS idx_predictions_run_date ON model_predictions(run_id, prediction_date);
+CREATE INDEX IF NOT EXISTS idx_features_symbol_date ON model_predictions(run_id, prediction_date);
 CREATE INDEX IF NOT EXISTS idx_technical_indicators_symbol_date ON technical_indicators(symbol_id, date);
 CREATE INDEX IF NOT EXISTS idx_technical_trade_signals_symbol_date ON technical_trade_signals(symbol_id, date);
 CREATE INDEX IF NOT EXISTS idx_outcomes_symbol_date ON outcomes(symbol_id, date);

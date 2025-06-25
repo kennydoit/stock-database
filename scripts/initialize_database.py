@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
 
-def initialize_database(force_reset=False, db_name="stock_prediction.db"):
+def initialize_database(force_reset=False, db_name="stock_database.db"):
     """Initialize database and populate with universe symbols"""
     
     print("🗄️ Initializing Historical Stock Data Database")
@@ -31,7 +31,7 @@ def initialize_database(force_reset=False, db_name="stock_prediction.db"):
     database_dir = project_root / 'database'
     database_path = database_dir / db_name
     
-    print(f"📍 Target database location: {database_path}")
+    print(f"🎯 Target database location: {database_path}")
     
     # Create database directory if it doesn't exist
     database_dir.mkdir(exist_ok=True)
@@ -104,17 +104,15 @@ def initialize_database(force_reset=False, db_name="stock_prediction.db"):
             print(f"⚠️ Could not move database: {e}")
     
     # Load symbols from validated_symbols.yaml
-    symbols_file = Path(config.get("symbols_file"))
+    project_root = str(Path(__file__).parent.parent.parent.resolve())
+    print(f"🌍 Project root: {project_root}")
+    def expand_path(path):
+        return path.replace("$project_root", project_root)
+
+    symbols_file = Path(expand_path(config["symbols_file"]))
     
     if not symbols_file.exists():
         print(f"❌ Symbols file not found: {symbols_file}")
-        print("Using fallback core symbols...")
-        # Fallback to hardcoded symbols if file not found
-        validated_symbols = {
-            'Technology': ['AAPL', 'MSFT', 'GOOGL', 'META', 'NVDA', 'AMZN', 'TSLA'],
-            'Professional Services': ['ACN', 'IBM', 'CRM'],
-            'ETF': ['SPY', 'QQQ', 'IWM']
-        }
     else:
         print(f"📥 Loading symbols from: {symbols_file}")
         try:
@@ -139,12 +137,6 @@ def initialize_database(force_reset=False, db_name="stock_prediction.db"):
                 
         except Exception as e:
             print(f"❌ Error loading symbols file: {e}")
-            print("Using fallback symbols...")
-            validated_symbols = {
-                'Technology': ['AAPL', 'MSFT', 'GOOGL', 'META', 'NVDA'],
-                'Professional Services': ['ACN', 'IBM'],
-                'ETF': ['SPY', 'QQQ']
-            }
 
     with db_manager:
         # Check current state
@@ -309,7 +301,7 @@ def initialize_database(force_reset=False, db_name="stock_prediction.db"):
         print(f"\n✅ Database initialization complete!")
         print(f"\nNext steps:")
         print(f"  1. Run: python scripts/collect_price_data.py")
-        print(f"  2. Run: python scripts/train_enhanced_model.py --symbol ACN")
+        # print(f"  2. Run: python scripts/train_enhanced_model.py --symbol ACN")
         print(f"\n📁 Symbols loaded from: {symbols_file}")
 
 def main():
@@ -319,8 +311,8 @@ def main():
     parser = argparse.ArgumentParser(description='Initialize stock prediction database')
     parser.add_argument('--reset', action='store_true', 
                        help='Force reset - clear existing data and start fresh')
-    parser.add_argument('--db-name', default='stock_prediction.db',
-                       help='Database name (default: stock_prediction.db)')
+    parser.add_argument('--db-name', default='stock_database.db',
+                       help='Database name (default: stock_database.db)')
     
     args = parser.parse_args()
     

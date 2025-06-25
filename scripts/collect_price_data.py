@@ -50,6 +50,11 @@ class YahooFinanceLoader:
 def collect_price_data(batch_size=10, total_symbols=None):
     """Collect historical price data for all symbols in database"""
     
+    # read configuration
+    config_path = Path(__file__).parent.parent / 'config.yaml'
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
+
     print("Collecting historical stock price data using Yahoo Finance...")
     
     # Initialize data loader and database manager
@@ -57,8 +62,10 @@ def collect_price_data(batch_size=10, total_symbols=None):
     db_manager = DatabaseManager()
     
     # Set date range for historical data (last 5 years)
+    start_date = config['periods']['stock_collection']['start']
+    # Convert to datetime
+    start_date = datetime.strptime(start_date, '%Y-%m-%d')
     end_date = datetime.now()
-    start_date = end_date - timedelta(days=365*5)  # 5 years
     
     print(f"Collecting data from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
     
