@@ -3,3 +3,6 @@
 *.sqlite
 *.sqlite3
 *.db-journal
+.env
+.venv
+uv.lock

@@ -1,4 +1,8 @@
-symbols_file: $project_root/stock-symbol-analyzer/data/validated_symbols.yaml
+symbols_file: $project_root/stock-symbol-screener/data/validated_symbols.yaml
+
+price_api: 
+  source: 'alphavantage'
+# source: 'yahoo'
 
 periods:
   stock_collection:

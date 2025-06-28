@@ -20,7 +20,7 @@ def load_screener_symbols():
     """Load symbols from the actual screener file"""
     
     # Direct path to your actual screener symbols
-    screener_file = Path(r"C:\Users\Kenrm\repositories\stock-symbol-analyzer\data\realistic_value_screen_symbols.txt")
+    screener_file = Path(r"C:\Users\Kenrm\repositories\stock-symbol-screener\data\realistic_value_screen_symbols.txt")
     
     if screener_file.exists():
         with open(screener_file, 'r') as f:

@@ -1,15 +1,18 @@
 -- Stock Prediction ML Database Schema
 -- Tables for storing stock data, news data, and features
 
--- Table for storing stock symbols and metadata
+
+-- Table for storing symbol metadata
 CREATE TABLE IF NOT EXISTS symbols (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    symbol VARCHAR(10) NOT NULL UNIQUE,
-    name VARCHAR(255),
-    sector VARCHAR(100),
-    market_cap VARCHAR(20),
-    exchange VARCHAR(10),
-    is_active BOOLEAN DEFAULT TRUE,
+    symbol_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    symbol TEXT NOT NULL UNIQUE,
+    name TEXT,
+    sector TEXT,
+    industry TEXT,
+    country TEXT,
+    market_cap TEXT,
+    exchange TEXT,
+    is_active INTEGER DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -26,7 +29,7 @@ CREATE TABLE IF NOT EXISTS stock_prices (
     adj_close DECIMAL(10,4),
     volume BIGINT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (symbol_id) REFERENCES symbols(id),
+    FOREIGN KEY (symbol_id) REFERENCES symbols(symbol_id),
     UNIQUE(symbol_id, date)
 );
 
@@ -54,7 +57,7 @@ CREATE TABLE IF NOT EXISTS stock_prices (
 --    relevance_score DECIMAL(3,2),
 --    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 --    FOREIGN KEY (news_id) REFERENCES news_articles(id),
---    FOREIGN KEY (symbol_id) REFERENCES symbols(id),
+--    FOREIGN KEY (symbol_id) REFERENCES symbols(symbol_id),
 --    UNIQUE(news_id, symbol_id)
 --);
 
@@ -124,7 +127,7 @@ CREATE TABLE IF NOT EXISTS technical_indicators (
     volume_lag_1 REAL, volume_lag_2 REAL, volume_lag_3 REAL, volume_lag_5 REAL, volume_lag_10 REAL, volume_lag_20 REAL,
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (symbol_id) REFERENCES symbols(id),
+    FOREIGN KEY (symbol_id) REFERENCES symbols(symbol_id),
     UNIQUE(symbol_id, date)
 );
 
@@ -166,7 +169,7 @@ CREATE TABLE IF NOT EXISTS technical_trade_signals (
     -- Add more as needed...
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (symbol_id) REFERENCES symbols(id),
+    FOREIGN KEY (symbol_id) REFERENCES symbols(symbol_id),
     UNIQUE(symbol_id, date)
 );
 
@@ -198,7 +201,7 @@ CREATE TABLE IF NOT EXISTS outcomes (
     returns_d90 REAL,
     returns_d120 REAL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (symbol_id) REFERENCES symbols(id),
+    FOREIGN KEY (symbol_id) REFERENCES symbols(symbol_id),
     UNIQUE(symbol_id, date)
 );
 
@@ -233,7 +236,6 @@ CREATE TABLE IF NOT EXISTS calendar(
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_stock_prices_symbol_date ON stock_prices(symbol_id, date);
-CREATE INDEX IF NOT EXISTS idx_features_symbol_date ON model_predictions(run_id, prediction_date);
 CREATE INDEX IF NOT EXISTS idx_technical_indicators_symbol_date ON technical_indicators(symbol_id, date);
 CREATE INDEX IF NOT EXISTS idx_technical_trade_signals_symbol_date ON technical_trade_signals(symbol_id, date);
 CREATE INDEX IF NOT EXISTS idx_outcomes_symbol_date ON outcomes(symbol_id, date);

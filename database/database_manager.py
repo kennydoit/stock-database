@@ -83,7 +83,8 @@ class DatabaseManager:
         try:
             self.connection = sqlite3.connect(self.db_path)
             self.connection.row_factory = sqlite3.Row  # Enable column access by name
-            logger.info(f"Connected to database: {self.db_path}")
+            self.connection.execute("PRAGMA foreign_keys = ON;")  # Enforce foreign key constraints
+            logger.info(f"Connected to database: {self.db_path} (foreign_keys=ON)")
         except Exception as e:
             logger.error(f"Failed to connect to database: {e}")
             raise
@@ -134,54 +135,26 @@ class DatabaseManager:
         self.execute_script(str(schema_path))
         logger.info("Database schema initialized")
     
-    def insert_symbol(self, symbol: str, name: str = None, sector: str = None, 
-                     market_cap: str = None, exchange: str = None) -> int:
+    def insert_symbol(self, symbol: str, name: str = None, sector: str = None, industry: str = None, country: str = None, market_cap: str = None, exchange: str = None) -> int:
         """
-        Insert or update symbol information
-        
-        Parameters:
-        -----------
-        symbol : str
-            Stock symbol
-        name : str
-            Company name
-        sector : str
-            Sector classification
-        market_cap : str
-            Market cap category
-        exchange : str
-            Exchange name
-            
-        Returns:
-        --------
-        int
-            Symbol ID
+        Insert symbol if it does not exist, or return its symbol_id. Do NOT overwrite existing fields with None.
         """
         if not self.connection:
             self.connect()
-        
         cursor = self.connection.cursor()
-        
-        try:
-            # Try to insert, update if exists
-            cursor.execute("""
-                INSERT OR REPLACE INTO symbols 
-                (symbol, name, sector, market_cap, exchange, updated_at)
-                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-            """, (symbol, name, sector, market_cap, exchange))
-            
-            # Get the symbol ID
-            cursor.execute("SELECT symbol_id FROM symbols WHERE symbol = ?", (symbol,))
-            symbol_id = cursor.fetchone()[0]
-            
-            self.connection.commit()
-            logger.debug(f"Inserted/updated symbol {symbol} with ID {symbol_id}")
-            return symbol_id
-            
-        except Exception as e:
-            logger.error(f"Failed to insert symbol {symbol}: {e}")
-            self.connection.rollback()
-            raise
+        # Check if symbol exists
+        cursor.execute("SELECT symbol_id, name, sector, industry, country, market_cap, exchange FROM symbols WHERE symbol = ?", (symbol,))
+        row = cursor.fetchone()
+        if row:
+            # Symbol exists, return its symbol_id
+            return row[0]
+        # Insert new symbol with provided fields (may be None)
+        cursor.execute("""
+            INSERT INTO symbols (symbol, name, sector, industry, country, market_cap, exchange, is_active, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
+        """, (symbol, name, sector, industry, country, market_cap, exchange))
+        self.connection.commit()
+        return cursor.lastrowid
     
     def insert_stock_prices(self, df: pd.DataFrame, symbol: str):
         """
